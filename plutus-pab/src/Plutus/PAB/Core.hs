@@ -322,8 +322,7 @@ removeInstance instanceId = do
 -- | Stop the instance.
 stopInstance :: forall t env. ContractInstanceId -> PABAction t env ()
 stopInstance instanceId = do
-    instancesState <- asks @(PABEnvironment t env) instancesState
-    liftIO $ STM.atomically $ do Instances.removeInstance instanceId instancesState
+    asks @(PABEnvironment t env) instancesState >>= liftIO . Instances.removeInstance instanceId
     putStopInstance @t instanceId
 
 -- | The 'Activity' of the instance.
