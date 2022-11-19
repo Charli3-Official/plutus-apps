@@ -121,7 +121,7 @@ import Plutus.PAB.Core.ContractInstance.STM (Activity (Active, Done, Stopped), B
                                              OpenEndpoint)
 import Plutus.PAB.Core.ContractInstance.STM qualified as Instances
 import Plutus.PAB.Effects.Contract (ContractDefinition, ContractEffect, ContractStore, PABContract (ContractDef),
-                                    getState)
+                                    getState, putStopInstance)
 import Plutus.PAB.Effects.Contract qualified as Contract
 import Plutus.PAB.Effects.TimeEffect (TimeEffect (SystemTime), systemTime)
 import Plutus.PAB.Effects.UUID (UUIDEffect, handleUUIDEffect)
@@ -322,13 +322,9 @@ removeInstance instanceId = do
 -- | Stop the instance.
 stopInstance :: forall t env. ContractInstanceId -> PABAction t env ()
 stopInstance instanceId = do
-    Instances.InstanceState{Instances.issStatus, Instances.issStop} <- instanceStateInternal instanceId
-    r' <- liftIO $ STM.atomically $ do
-            status <- STM.readTVar issStatus
-            case status of
-                Active -> STM.putTMVar issStop () >> pure Nothing
-                _      -> pure (Just $ InstanceAlreadyStopped instanceId)
-    traverse_ throwError r'
+    instancesState <- asks @(PABEnvironment t env) instancesState
+    liftIO $ STM.atomically $ do Instances.removeInstance instanceId instancesState
+    putStopInstance @t instanceId
 
 -- | The 'Activity' of the instance.
 instanceActivity :: forall t env. ContractInstanceId -> PABAction t env Activity
